@@ -51,8 +51,60 @@ const h3 = room.querySelector("h3");
 const ul = room.querySelector("ul");
 const chatForm = room.querySelector("form");
 const roomList = welcome.querySelector("ul");
+const myFace = document.getElementById("myFace");
+const muteBtn = document.getElementById("mute");
+const cameraBtn = document.getElementById("camera");
+const camerasSelect = document.getElementById("cameras");
 
-room.hidden = true;
+let myStream;
+let muted = false;
+let cameraOff = false;
+
+async function getCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices(); // 유저의 모든 디바이스를 가져옴
+        const cameras = devices.filter(device => device.kind === "videoinput");
+        const currentCamera = myStream.getVideoTracks()[0];
+
+        cameras.forEach(camera=> {
+            const option = document.createElement("option");
+            option.value = camera.deviceId;
+            option.innerText = camera.label;
+            if(currentCamera.label == camera.label) {
+                option.selected = true;
+            }
+            camerasSelect.appendChild(option);
+        })
+    } catch (e) {
+        console.log(e);
+    }
+}
+async function getMedia(deviceId) {
+    const initalConstrains = {
+        audio: true,
+        video: { facingMode: "user"}
+    }
+    const cameraConstraints = {
+        audio: true,
+        video: { deviceId: { exact: deviceId }}
+    }
+
+    try {
+        myStream = await navigator.mediaDevices.getUserMedia(
+            deviceId ? cameraConstraints : initalConstrains
+        );
+        myFace.srcObject = myStream;
+        if(!deviceId){
+            await getCameras();
+        }
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+welcome.hidden = true;
+// room.hidden = true;
+getMedia();
 
 let roomName;
 let nickname;
@@ -61,6 +113,7 @@ function showRoom() {
     welcome.hidden = true;
     room.hidden = false;
     h3.innerText = `Room ${roomName}`;
+    getMedia();
 }
 
 function addMessage(message) {
@@ -86,7 +139,43 @@ chatForm.addEventListener("submit", (event) => {
         addMessage(`You: ${value}`);
     });
     input.value = "";
-})
+});
+
+muteBtn.addEventListener("click", () => {
+    if(!muted) {
+        myStream.getAudioTracks().forEach((track) => {
+            track.enabled = !track.enabled;
+        });
+        muteBtn.innerText = "Unmute";
+        muted = true;
+    } else {
+        myStream.getAudioTracks().forEach((track) => {
+            track.enabled = !track.enabled;
+        });
+        muteBtn.innerText = "Mute";
+        muted = false;
+    }
+});
+
+cameraBtn.addEventListener("click", () => {
+    if(!cameraOff) {
+        myStream.getVideoTracks().forEach((track) => {
+            track.enabled = !track.enabled;
+        });
+        cameraBtn.innerText = "Turn Camera on";
+        cameraOff = true;
+    } else {
+        myStream.getVideoTracks().forEach((track) => {
+            track.enabled = !track.enabled;
+        });
+        cameraBtn.innerText = "Turn Camera off";
+        cameraOff = false;
+    }
+});
+
+camerasSelect.addEventListener("input", async() =>{
+    await getMedia(camerasSelect.value);
+});
 
 socket.on("welcome", (nickName, roomCount) => {
     addMessage(`${nickName} joined!`);

@@ -21,11 +21,17 @@ html(lang="en")
                 h4 Open Rooms: 
                 ul 
                 form
-                    input(placeholder="room name", required, type="text")#roomName
-                    input(placeholder="enter your nickname", required, type="text")#nickname
+                    input#roomName(placeholder="room name", required, type="text")
+                    input#nickname(placeholder="enter your nickname", required, type="text")
                     button Enter Room
             div#room
                 h3
+                div#myStream
+                    video#myFace(autoplay, palysinline, width="400", height="400")
+                    button#mute Mute
+                    button#camera Turn Camera off
+                    select#cameras
+                        //- option(value="device") Face Camera
                 ul
                 form
                     input(placeholder="Please enter your message", required, type="text")
