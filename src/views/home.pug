@@ -10,11 +10,25 @@ html(lang="en")
         header
             h1 Zomm clone 
         main
-            form#nick
-                input(type="text", placeholder="choose a nickname", required)
-                button Save 
-            ul
-            form#message
-                input(type="text", placeholder="write a meg", required)
-                button Send 
+            //- form#nick
+            //-     input(type="text", placeholder="choose a nickname", required)
+            //-     button Save 
+            //- ul
+            //- form#message
+            //-     input(type="text", placeholder="write a meg", required)
+            //-     button Send 
+            div#welcome
+                h4 Open Rooms: 
+                ul 
+                form
+                    input(placeholder="room name", required, type="text")#roomName
+                    input(placeholder="enter your nickname", required, type="text")#nickname
+                    button Enter Room
+            div#room
+                h3
+                ul
+                form
+                    input(placeholder="Please enter your message", required, type="text")
+                    button Send
+        script(src="/socket.io/socket.io.js")
         script(src="/public/js/app.js")
