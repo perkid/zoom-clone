@@ -8,7 +8,7 @@ html(lang="en")
         link(rel="stylesheet", href="https://unpkg.com/mvp.css")
     body 
         header
-            h1 Zomm clone 
+            //- h1 Zomm clone 
         main
             //- form#nick
             //-     input(type="text", placeholder="choose a nickname", required)
@@ -32,6 +32,8 @@ html(lang="en")
                     button#camera Turn Camera off
                     select#cameras
                         //- option(value="device") Face Camera
+                div#peerStream
+                    video#peerFace(autoplay, palysinline, width="400", height="400")
                 ul
                 form
                     input(placeholder="Please enter your message", required, type="text")

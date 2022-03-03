@@ -68,15 +68,23 @@ function countRoom(roomName) {
 }
 
 io.on("connection", (socket) => {
-    socket.onAny((event) => {
-        console.log(`Socket Event:${event}`);
-    });
-    socket.on("room", (roomName, nickname, done) => {
+    // socket.onAny((event) => {
+    //     console.log(`Socket Event:${event}`);
+    // });
+    socket.on("room", (roomName, nickname) => {
         socket.join(roomName);
         socket["nickname"] = nickname;
-        done();
         socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
         io.sockets.emit("room_change", publicRooms()); // 전체 서버에 보내주는것
+    });
+    socket.on("offer", (offer, roomName) => {
+        socket.to(roomName).emit("offer", offer);
+    });
+    socket.on("answer", (answer, roomName) => {
+        socket.to(roomName).emit("answer", answer);
+    });
+    socket.on("ice", (ice, roomName) => {
+        socket.to(roomName).emit("ice", ice);
     });
     socket.on("sendMessage", (msg, room, done) => {
         done();

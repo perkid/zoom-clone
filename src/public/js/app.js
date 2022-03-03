@@ -55,10 +55,12 @@ const myFace = document.getElementById("myFace");
 const muteBtn = document.getElementById("mute");
 const cameraBtn = document.getElementById("camera");
 const camerasSelect = document.getElementById("cameras");
+const peerFace = document.getElementById("peerFace");
 
 let myStream;
 let muted = false;
 let cameraOff = false;
+let myPeerConnection;
 
 async function getCameras() {
     try {
@@ -102,18 +104,47 @@ async function getMedia(deviceId) {
     }
 }
 
-welcome.hidden = true;
-// room.hidden = true;
-getMedia();
+function makeConnection() {
+    myPeerConnection = new RTCPeerConnection({
+        iceServers: [
+            {
+              urls: [
+                "stun:stun.l.google.com:19302",
+                "stun:stun1.l.google.com:19302",
+                "stun:stun2.l.google.com:19302",
+                "stun:stun3.l.google.com:19302",
+                "stun:stun4.l.google.com:19302",
+              ],
+            },
+          ],
+    });
+    myPeerConnection.addEventListener("icecandidate", (data) => {
+        socket.emit("ice", data.candidate, roomName);
+    });
+    myPeerConnection.addEventListener("addstream", (data) => {
+        peerFace.srcObject = data.stream;
+    });
+    myPeerConnection.addEventListener("track", (data) => {
+        peerFace.srcObject = data.streams[0];
+    });
+    myStream.getTracks().forEach((track) => {
+        myPeerConnection.addTrack(track, myStream);
+    });
+};
+
+// welcome.hidden = true;
+room.hidden = true;
+// getMedia();
 
 let roomName;
 let nickname;
 
-function showRoom() {
+async function showRoom() {
     welcome.hidden = true;
     room.hidden = false;
     h3.innerText = `Room ${roomName}`;
-    getMedia();
+    await getMedia();
+    makeConnection();
 }
 
 function addMessage(message) {
@@ -122,11 +153,12 @@ function addMessage(message) {
     ul.appendChild(li);
 }
 
-roomForm.addEventListener("submit", (event) => {
+roomForm.addEventListener("submit", async(event) => {
     event.preventDefault();
     roomName = roomForm.querySelector("#roomName").value;
     nickname = roomForm.querySelector("#nickname").value;
-    socket.emit("room", roomName, nickname, showRoom); // 임의 event 생성 가능, object 전송 가능(여러가지도 보낼 수 있음), 서버에 넘길 function (back-end에서 실행되는것x)
+    await showRoom();
+    socket.emit("room", roomName, nickname); // 임의 event 생성 가능, object 전송 가능(여러가지도 보낼 수 있음), 서버에 넘길 function (back-end에서 실행되는것x)
     roomForm.querySelector("#roomName").value = "";
     roomForm.querySelector("#nickname").value = "";
 });
@@ -175,9 +207,17 @@ cameraBtn.addEventListener("click", () => {
 
 camerasSelect.addEventListener("input", async() =>{
     await getMedia(camerasSelect.value);
+    if (myPeerConnection) {
+        const videoTrack = myStream.getVideoTracks()[0];
+        const videoSender = myPeerConnection.getSenders().find((sender) => sender.track.kind === "video");
+        videoSender.replaceTrack(videoTrack);
+    }
 });
 
-socket.on("welcome", (nickName, roomCount) => {
+socket.on("welcome", async (nickName, roomCount) => {
+    const offer = await myPeerConnection.createOffer();
+    myPeerConnection.setLocalDescription(offer);
+    socket.emit("offer", offer, roomName);
     addMessage(`${nickName} joined!`);
     h3.innerText = `Room ${roomName} (${roomCount})`;
 });
@@ -189,7 +229,7 @@ socket.on("bye", (nickname, roomCount) => {
 
 socket.on("sendMessage", (nickName, msg) => {
     addMessage(`${nickName}: ${msg}`);
-})
+});
 
 socket.on("room_change", (rooms) => {
     roomList.innerHTML = "";
@@ -197,5 +237,20 @@ socket.on("room_change", (rooms) => {
         const li = document.createElement("li");
         li.innerText = room;
         roomList.append(li);
-    })
-})
+    });
+});
+
+socket.on("offer", async(offer) => {
+    myPeerConnection.setRemoteDescription(offer);
+    const answer = await myPeerConnection.createAnswer();
+    myPeerConnection.setLocalDescription(answer);
+    socket.emit("answer", answer, roomName);
+});
+
+socket.on("answer", (answer) => {
+    myPeerConnection.setRemoteDescription(answer);
+});
+
+socket.on("ice", (ice) => {
+    myPeerConnection.addIceCandidate(ice);
+});
